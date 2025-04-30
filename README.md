@@ -1,5 +1,5 @@
 
-# Explicación del Programa Java y Condición de Carrera
+# Promps usados para taller-s4
 
 ## Usuario:
 **¿Puedes ayudarme describiendo que hace cada cosa de este programa?**
