@@ -240,3 +240,165 @@ Ambos se quedan **esperando un lock que el otro ya tiene**, y ninguno lo libera 
 ### 🧠 Conclusión:
 
 El deadlock se evita porque **se elimina la posibilidad de que dos hilos bloqueen recursos en orden inverso**. Todos siguen la **misma jerarquía de adquisición de locks**, por lo que **uno siempre terminará antes de que el otro empiece**.
+
+## Problema 3 
+
+## Usuario:
+### Puedes explicarme el funcionamiento de este programa y que ejemplo de error esta sucediendo aqui? 
+```java
+public class StrvtnExample {
+    private static final ReentrantLock lock = new ReentrantLock();
+
+    public static void main(String[] args){
+      Runnable task = () -> {
+        while(true) {
+            lock.lock();
+            try{
+                System.out.printf("%s acquired the lock.%n", Thread.currentThread().getName());
+            } finally {
+                lock.unlock();
+            }
+        }
+      };
+
+      for(var i = 0; i < 10; i++) {
+          Thread t = new Thread(task, "Hilo-" + i);
+          if( i % 2 == 0) t.setPriority(Thread.MAX_PRIORITY);
+          else t.setPriority(Thread.MIN_PRIORITY);
+          t.start();
+      }
+    }
+}
+
+```
+
+## ChatGPT:
+### Este programa es un ejemplo clásico del problema de starvation (inaniación o inanición de hilos), un error común en programación concurrente.
+
+### 🧠 ¿Qué hace este programa?
+Crea una instancia de ReentrantLock, una clase que permite controlar el acceso exclusivo a una sección crítica del código.
+
+Define un Runnable que:
+
+- Ejecuta un bucle infinito **(while(true))**
+
+- Intenta adquirir el lock
+
+- Si lo consigue, imprime qué hilo lo adquirió
+
+- Luego libera el lock
+
+Crea 10 hilos:
+
+- Los hilos con índice par (Hilo-0, Hilo-2, etc.) tienen prioridad máxima
+
+- Los hilos con índice impar tienen prioridad mínima
+
+- Todos ejecutan el mismo task
+
+### ⚠️ ¿Qué error sucede aquí? — Starvation
+Starvation ocurre cuando uno o más hilos no pueden acceder al recurso compartido porque otros hilos acaparan el control continuamente.
+
+En este programa:
+
+- Los hilos de alta prioridad (pares) tienen más probabilidad de ser elegidos por el planificador de hilos (scheduler).
+
+- Como el bucle es infinito y ellos acaparan el lock, los hilos de baja prioridad (impares) casi nunca logran ejecutarse, incluso si están listos.
+
+- Resultado: los hilos de baja prioridad se “mueren de hambre” esperando el lock.
+
+### 🖥️ ¿Qué verías en consola?
+Probablemente verías algo como esto:
+Hilo-0 acquired the lock.
+Hilo-2 acquired the lock.
+Hilo-4 acquired the lock.
+Hilo-0 acquired the lock.
+Hilo-6 acquired the lock.
+...
+Y casi nunca aparecerían los hilos impares (**Hilo-1**, **Hilo-3**, etc.).
+
+### ✅ ¿Cómo evitar starvation?
+1. Usar fair locks (locks justos):
+   ```java
+   private static final ReentrantLock lock = new ReentrantLock(true); // fair = true
+   ```
+    Esto hace que el lock respete el orden de llegada (FIFO).
+2. Evitar usar bucles infinitos sin pausas (como **while(true)**)
+3. No depender en exceso de la prioridad de hilos (en muchos sistemas, la prioridad es solo una “sugerencia” al scheduler)
+
+## Problema 4
+## Usuario: 
+"Ayúdame explicado el funcionamiento que tiene este programa de una manera fácil de comprender"
+## ChatGPT: 
+Este programa tiene dos hilos (Thread-1 y Thread-2) que intentan adquirir dos locks (lock1 y lock2) de forma concurrente usando la clase ReentrantLock.
+
+Cada hilo intenta:
+1. Obtener el primer lock.
+2. Esperar un poco (con Thread.sleep(50)).
+3. Obtener el segundo lock.
+
+Si no consigue el segundo lock, *libera el primero* y vuelve a intentarlo.
+
+### 🔄 Objetivo:
+Evitar un *deadlock*. Un deadlock ocurre cuando dos hilos se bloquean entre sí porque cada uno tiene un recurso que el otro necesita. En este caso, se evita liberando el primer lock si no se consigue el segundo.
+
+## Usuario: 
+"¿Cómo se podría optimizar el programa para que los hilos tarden menos tiempo en adquirir los locks?"
+
+## ChatGPT: 
+Se puede optimizar de las siguientes maneras:
+
+### ✅ 1. *Unificar el orden de adquisición de locks*
+En el código original, un hilo usa lock1 → lock2 y el otro lock2 → lock1. Esto crea riesgo de deadlock. Si ambos hilos usan el *mismo orden*, se elimina ese riesgo.
+
+### ✅ 2. *Usar lock() en lugar de tryLock()*
+tryLock() devuelve de inmediato si no puede adquirir el lock, lo que puede llevar a reintentos y pérdida de rendimiento. Si no hay riesgo de deadlock, lock() es más eficiente.
+
+### ✅ 3. *Eliminar Thread.sleep() y Thread.yield()*
+Estas instrucciones ralentizan el programa. Con un orden de locks uniforme, ya no son necesarias.
+
+## Usuario: 
+"A este código implementale la versión optimizada, ten en cuenta que attemptBoth recibe parámetros."
+
+## ChatGPT: 
+# Código Java para Evitar Deadlock utilizando ReentrantLock
+
+```java
+import java.util.concurrent.locks.ReentrantLock;
+
+public class LvlckExample {
+    private static final ReentrantLock lock1 = new ReentrantLock();
+    private static final ReentrantLock lock2 = new ReentrantLock();
+
+    public static void main(String[] args) {
+        // Ambos hilos usan el mismo orden: lock1 → lock2
+        Runnable r1 = () -> attemptBoth(lock1, lock2, "Thread-1");
+        Runnable r2 = () -> attemptBoth(lock1, lock2, "Thread-2");
+
+        new Thread(r1).start();
+        new Thread(r2).start();
+    }
+
+    private static void attemptBoth(ReentrantLock first, ReentrantLock second, String name) {
+        first.lock();
+        System.out.println(name + " adquirió primer lock");
+
+        second.lock();
+        System.out.println(name + " adquirió segundo lock, va a proceder");
+
+        try {
+            System.out.println(name + " está trabajando en la sección crítica");
+        } finally {
+            second.unlock();
+            first.unlock();
+            System.out.println(name + " liberó ambos locks");
+        }
+    }
+}
+```
+### 🔧 Mejoras implementadas:
+- Orden fijo en adquisición de locks: todos los hilos usan el mismo orden lock1 → lock2 para eliminar riesgo de deadlock.
+
+- Reemplazo de tryLock() por lock(): como no hay riesgo de bloqueo circular, podemos usar bloqueos normales (más rápidos).
+
+- Eliminación del Thread.sleep(50) y yield(): ya no son necesarios si los hilos no compiten erráticamente.
