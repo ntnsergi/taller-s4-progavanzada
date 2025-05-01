@@ -1,6 +1,7 @@
 
 # Promps usados para taller-s4
 
+## Problema 1
 ## Usuario:
 **¿Puedes ayudarme describiendo que hace cada cosa de este programa?**
 
@@ -121,3 +122,120 @@ public class RCndtnExample {
 Este código imprimirá siempre **Counter: 20000**.
 
 ¿Te gustaría que te explique cómo funciona el bloqueo con bloques `synchronized` también?
+
+## Problema 2
+## Usuario:
+**Ayúdame explicándome el funcionamiento del programa y por qué no termina la ejecución**
+
+### Código:
+```java
+public class DdlckExample {
+    private static final Object lock1 = new Object();
+    private static final Object lock2 = new Object();
+
+    public static void main(String[] args){
+      Thread thread1 = new Thread(() -> {
+          synchronized (lock1) {
+              System.out.println("Thread 1: Acquired lock1");
+              try{ Thread.currentThread().sleep(100);} catch (InterruptedException _){}
+              synchronized (lock2) {
+                  System.out.println("Thread 1: Acquired lock2");
+              }
+          }
+      });
+
+      Thread thread2 = new Thread(() -> {
+          synchronized (lock2) {
+              System.out.println("Thread 2: Acquired lock2");
+              try{ Thread.currentThread().sleep(100);} catch (InterruptedException _){}
+              synchronized (lock1) {
+                  System.out.println("Thread 2: Acquired lock1");
+              }
+          }
+      });
+      thread1.start();
+      thread2.start();
+    }
+}
+```
+
+## ChatGPT:
+Este programa es un ejemplo clásico de un **_deadlock_ (interbloqueo)**. La razón por la que **no termina su ejecución** es porque **ambos hilos quedan esperando indefinidamente** a que el otro libere un recurso que necesitan.
+
+### 🔁 ¿Qué pasa exactamente en el código?
+
+#### 🔒 Hilo 1:
+1. Adquiere `lock1`
+2. Espera 100 ms (`sleep`)
+3. Intenta adquirir `lock2`
+
+#### 🔒 Hilo 2:
+1. Adquiere `lock2`
+2. Espera 100 ms (`sleep`)
+3. Intenta adquirir `lock1`
+
+### 💥 ¿Dónde ocurre el problema?
+
+- **Thread 1** entra primero, bloquea `lock1` y duerme.
+- **Thread 2** entra casi al mismo tiempo, bloquea `lock2` y duerme también.
+- Después de los 100 ms:
+  - Thread 1 quiere `lock2`, pero ya lo tiene el Thread 2 → **espera**.
+  - Thread 2 quiere `lock1`, pero ya lo tiene el Thread 1 → **espera**.
+
+🎯 Ambos hilos están **esperando mutuamente** uno por el otro. **Ninguno libera su lock**, por lo que **el programa nunca avanza ni termina.**
+
+### 📌 Resultado en consola:
+```
+Thread 1: Acquired lock1
+Thread 2: Acquired lock2
+```
+Y luego se queda colgado.
+
+### ✅ ¿Cómo evitar un deadlock?
+
+Una regla sencilla es **adquirir los locks en el mismo orden** en todos los hilos:
+
+```java
+Thread thread2 = new Thread(() -> {
+    synchronized (lock1) {
+        System.out.println("Thread 2: Acquired lock1");
+        try{ Thread.sleep(100); } catch (InterruptedException _) {}
+        synchronized (lock2) {
+            System.out.println("Thread 2: Acquired lock2");
+        }
+    }
+});
+```
+
+Ahora ambos hilos usan el orden `lock1 → lock2`, por lo tanto no se bloquean entre sí.
+
+---
+
+## Usuario:
+**¿Por qué el error se soluciona al ponerlos al mismo orden?**
+
+## ChatGPT:
+Buena observación, estás cerca, pero te aclaro con más precisión:
+
+### ✅ ¿Por qué se soluciona el deadlock al usar el mismo orden?
+
+Cuando **ambos hilos adquieren los locks en el mismo orden** (`lock1` luego `lock2`), **ya no pueden bloquearse mutuamente**, porque:
+
+- Si **Thread 1** adquiere `lock1` primero, y luego `lock2`, **Thread 2 no podrá adquirir `lock1` hasta que Thread 1 lo libere.**
+- Entonces **Thread 2 nunca llegará a bloquear `lock2` antes de `lock1`**, porque está esperando que se libere `lock1` primero.
+
+### 🚫 En el caso original (orden opuesto):
+- Thread 1: `lock1 → sleep → intenta lock2`
+- Thread 2: `lock2 → sleep → intenta lock1`
+
+Ambos se quedan **esperando un lock que el otro ya tiene**, y ninguno lo libera porque está esperando a adquirir el segundo.
+
+### ✅ En el caso corregido (mismo orden `lock1 → lock2`):
+- Thread 1: `lock1 → lock2`
+- Thread 2: espera a que se libere `lock1`
+- Cuando Thread 1 termina, **libera ambos locks**
+- Entonces Thread 2 puede ejecutar todo **sin interbloqueo**
+
+### 🧠 Conclusión:
+
+El deadlock se evita porque **se elimina la posibilidad de que dos hilos bloqueen recursos en orden inverso**. Todos siguen la **misma jerarquía de adquisición de locks**, por lo que **uno siempre terminará antes de que el otro empiece**.
