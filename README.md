@@ -327,6 +327,34 @@ Y casi nunca aparecerían los hilos impares (**Hilo-1**, **Hilo-3**, etc.).
 3. No depender en exceso de la prioridad de hilos (en muchos sistemas, la prioridad es solo una “sugerencia” al scheduler)
 
 ## Problema 4
+### Ejecute el programa por lo menos 5 veces y por cada ejecución copie todos los mensajes de salida. Responda a la pregunta:
+- ¿En qué número de línea aparecen los mensajes: Thread-1 adquirió segundo lock, va a proceder y Thread-2 adquirió segundo lock, va a proceder?
+  Thread-1 adquirió primer lock
+Thread-2 adquirió primer lock
+Thread-2 libera primer lock y cede
+Thread-1 libera primer lock y cede
+Thread-1 adquirió primer lock
+Thread-2 adquirió primer lock
+Thread-1 libera primer lock y cede
+Thread-2 libera primer lock y cede
+Thread-1 adquirió primer lock
+Thread-2 adquirió primer lock
+Thread-1 libera primer lock y cede
+Thread-1 adquirió primer lock
+Thread-2 libera primer lock y cede
+Thread-2 adquirió primer lock
+Thread-1 libera primer lock y cede
+Thread-2 adquirió segundo lock, va a proceder
+Thread-1 adquirió primer lock
+Thread-1 adquirió segundo lock, va a proceder
+
+Process finished with exit code 0
+El mensaje "Thread-1 adquirió segundo lock, va a proceder" aparece em la decima linea y "Thread-2 adquirió segundo lock, va a proceder" aparece en la octava linea.
+
+- ¿Es el mismo número de línea o cambia?
+  No es el mismo numero de linea, el "Thread-1" adquiere el segundo lock y procede despues de que ya lo hizo "Thread-2"
+
+  
 ## Usuario: 
 "Ayúdame explicado el funcionamiento que tiene este programa de una manera fácil de comprender"
 ## ChatGPT: 
