@@ -212,7 +212,8 @@ Ahora ambos hilos usan el orden `lock1 → lock2`, por lo tanto no se bloquean e
 ---
 
 ## Usuario:
-**¿Por qué el error se soluciona al ponerlos al mismo orden?**
+**¿Por qué el error se soluciona al ponerlos al mismo orden? puede que sea porque en caso de ponerlos en el mismo orden el hilo 1 
+adquiere el lock 1 y despues adquiere el lock 2 libreando el uno y asi que el hilo 2 pueda adquirir lock 1 y asi seguir su proceso?**
 
 ## ChatGPT:
 Buena observación, estás cerca, pero te aclaro con más precisión:
